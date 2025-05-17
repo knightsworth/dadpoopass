@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://cr62gxvkf6iv4"]
+
+[ext_resource type="Script" uid="uid://b8embeh62bcl" path="res://player_controller.gd" id="1_onrkg"]
+[ext_resource type="Texture2D" uid="uid://dl4oic818ly3x" path="res://icon.svg" id="2_i3pqv"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hqtel"]
+
+[node name="CharacterBody2D" type="CharacterBody2D" groups=["player"]]
+script = ExtResource("1_onrkg")
+
+[node name="Icon" type="Sprite2D" parent="."]
+position = Vector2(105, 28)
+scale = Vector2(0.328125, 0.1875)
+texture = ExtResource("2_i3pqv")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(106, 28)
+shape = SubResource("CircleShape2D_hqtel")
+
+[node name="DialogueLabel" type="Label" parent="."]
+offset_left = -23.0
+offset_top = 12.0
+offset_right = 17.0
+offset_bottom = 35.0
+metadata/_edit_use_anchors_ = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

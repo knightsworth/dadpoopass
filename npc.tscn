@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://b8hjpyniko8r0"]
+
+[ext_resource type="Script" uid="uid://dqfwy2a7v8rvq" path="res://npc_script.gd" id="1_xxcha"]
+[ext_resource type="Texture2D" uid="uid://du4x6dfl8symr" path="res://thosewhoknow.png" id="2_kh24r"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ul7y6"]
+
+[node name="CharacterBody2D2" type="CharacterBody2D" groups=["player"]]
+position = Vector2(38, 63)
+script = ExtResource("1_xxcha")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_ul7y6")
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -23.0
+offset_top = 12.0
+offset_right = 17.0
+offset_bottom = 35.0
+metadata/_edit_use_anchors_ = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="Thosewhoknow" type="Sprite2D" parent="."]
+position = Vector2(-1, -0.999998)
+scale = Vector2(0.0928572, 0.110714)
+texture = ExtResource("2_kh24r")
