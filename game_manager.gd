@@ -58,54 +58,88 @@ func _ready():
 	print_debug("Game started! Use arrow keys to move. Press Enter/Space to interact with NPCs.")
 
 func spawn_npcs():
+	var spawned_positions: Array = []
+	var min_distance = 50.0
+	
 	for i in range(npc_count):
 		var npc_instance = npc_scene.instantiate()
-		var random_x = randf_range(150, 250)  # Adjusted for testing
-		var random_y = randf_range(150, 250)
-		npc_instance.position = Vector2(random_x, random_y)
-		var location = determine_location(random_x, random_y)
+		var position = Vector2()
+		var attempts = 0
+		var max_attempts = 10
+		
+		while attempts < max_attempts:
+			var random_x = randf_range(150, 250)
+			var random_y = randf_range(150, 250)
+			position = Vector2(random_x, random_y)
+			
+			var too_close = false
+			for existing_pos in spawned_positions:
+				if position.distance_to(existing_pos) < min_distance:
+					too_close = true
+					break
+			
+			if not too_close:
+				break
+			attempts += 1
+		
+		if attempts >= max_attempts:
+			print_debug("Could not find non-overlapping position for NPC " + str(i))
+			position = Vector2(150 + i * 60, 150)
+		
+		npc_instance.position = position
+		spawned_positions.append(position)
+		
+		var location = determine_location(position.x, position.y)
 		npc_instance.npc_name = name_markov.generate_name()
 		npc_instance.dialogue_markov = dialogue_markovs[location]
 		add_child(npc_instance)
 		print_debug("NPC created: " + npc_instance.npc_name + " at position " + str(npc_instance.position) + " in " + location)
 
 func spawn_placeholder_npcs():
+	var spawned_positions: Array = []
+	var min_distance = 50.0
+	
 	for i in range(npc_count):
-		# Create an NPC instance instead of a plain CharacterBody2D
-		var npc = NPC.new()  # Use the NPC class directly
+		var npc = NPC.new()
 		npc.name = "PlaceholderNPC_" + str(i)
 		
-		# Position randomly (closer for testing)
-		var random_x = randf_range(150, 250)
-		var random_y = randf_range(150, 250)
-		npc.position = Vector2(random_x, random_y)
+		var position = Vector2()
+		var attempts = 0
+		var max_attempts = 10
 		
-		# Determine location
-		var location = determine_location(random_x, random_y)
+		while attempts < max_attempts:
+			var random_x = randf_range(150, 250)
+			var random_y = randf_range(150, 250)
+			position = Vector2(random_x, random_y)
+			
+			var too_close = false
+			for existing_pos in spawned_positions:
+				if position.distance_to(existing_pos) < min_distance:
+					too_close = true
+					break
+			
+			if not too_close:
+				break
+			attempts += 1
 		
-		# Set up name and dialogue using the same logic as spawn_npcs
+		if attempts >= max_attempts:
+			print_debug("Could not find non-overlapping position for NPC " + str(i))
+			position = Vector2(150 + i * 60, 150)
+		
+		npc.position = position
+		spawned_positions.append(position)
+		
+		var location = determine_location(position.x, position.y)
 		npc.npc_name = name_markov.generate_name()
 		npc.dialogue_markov = dialogue_markovs[location]
-		
-		# Add to NPC group
 		npc.add_to_group("npc")
 		
-		# Add visual indicator
 		var rect = ColorRect.new()
 		rect.size = Vector2(32, 32)
 		rect.position = Vector2(-16, -16)
 		rect.color = Color(1, 0.5, 0)
 		npc.add_child(rect)
 		
-		# Add name label
-		var label = Label.new()
-		label.text = npc.npc_name
-		label.position = Vector2(-40, -40)
-		label.size = Vector2(80, 20)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		npc.add_child(label)
-		
-		# Add to scene
 		add_child(npc)
 		
 		print_debug("Placeholder NPC created: " + npc.npc_name + " at position " + str(npc.position) + " in " + location)

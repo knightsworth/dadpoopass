@@ -10,6 +10,7 @@ var sprite: Sprite2D
 var dialogue_ui: CanvasLayer
 var dialogue_background: ColorRect
 var dialogue_label: Label
+var npc_name_label: Label
 var options_container: HBoxContainer
 
 @export var interaction_distance = 300.0
@@ -41,6 +42,13 @@ func _ready():
 	dialogue_background.color = Color(0, 0, 0, 0.8)
 	dialogue_ui.add_child(dialogue_background)
 	
+	# NPC name label
+	npc_name_label = Label.new()
+	npc_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	npc_name_label.add_theme_color_override("font_color", Color(1, 1, 0))
+	npc_name_label.visible = false
+	dialogue_ui.add_child(npc_name_label)
+	
 	# Dialogue label
 	dialogue_label = Label.new()
 	dialogue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -49,22 +57,24 @@ func _ready():
 	dialogue_label.visible = false
 	dialogue_ui.add_child(dialogue_label)
 	
-	# Interaction options container
+	# Options container
 	options_container = HBoxContainer.new()
+	options_container.alignment = BoxContainer.ALIGNMENT_CENTER
 	options_container.visible = false
 	dialogue_ui.add_child(options_container)
 	
-	# Add interaction buttons
-	var options = ["Talk", "Trade", "Steal", "Kill", "Quest"]
+	# Add interaction option buttons
+	var options = ["Trade", "Steal", "Kill", "Quest", "Leave"]
 	for option in options:
 		var button = Button.new()
 		button.text = option
-		button.connect("pressed", Callable(self, "_on_interaction_option_pressed").bind(option.to_lower()))
+		button.connect("pressed", Callable(self, "_on_option_pressed").bind(option.to_lower()))
 		options_container.add_child(button)
 	
-	# Position in the bottom third of the screen
+	# Position UI elements
 	update_dialogue_position()
 	
+	# Ensure the dialogue is initially hidden
 	hide_dialogue()
 	print_debug("Player controller initialized successfully")
 
@@ -75,21 +85,25 @@ func _notification(what):
 func update_dialogue_position():
 	var viewport_size = get_viewport_rect().size
 	var dialogue_width = viewport_size.x * 0.8
-	var dialogue_height = viewport_size.y * 0.2
+	var dialogue_height = viewport_size.y * 0.25
 	var dialogue_x = (viewport_size.x - dialogue_width) / 2
-	var dialogue_y = viewport_size.y * 0.67
+	var dialogue_y = viewport_size.y * 0.65
 	
-	# Update background size and position
-	dialogue_background.size = Vector2(dialogue_width, dialogue_height + 40)  # Extra height for buttons
+	# Background
+	dialogue_background.size = Vector2(dialogue_width, dialogue_height)
 	dialogue_background.position = Vector2(dialogue_x, dialogue_y)
 	
-	# Update label size and position
-	dialogue_label.size = Vector2(dialogue_width - 20, dialogue_height - 20)
-	dialogue_label.position = Vector2(dialogue_x + 10, dialogue_y + 10)
+	# NPC name label
+	npc_name_label.size = Vector2(dialogue_width - 20, 20)
+	npc_name_label.position = Vector2(dialogue_x + 10, dialogue_y + 10)
 	
-	# Position the options container below the dialogue
+	# Dialogue label
+	dialogue_label.size = Vector2(dialogue_width - 20, dialogue_height - 70)
+	dialogue_label.position = Vector2(dialogue_x + 10, dialogue_y + 35)
+	
+	# Options container
 	options_container.size = Vector2(dialogue_width - 20, 30)
-	options_container.position = Vector2(dialogue_x + 10, dialogue_y + dialogue_height + 5)
+	options_container.position = Vector2(dialogue_x + 10, dialogue_y + dialogue_height - 40)
 
 func _physics_process(delta):
 	var input_direction = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
@@ -108,12 +122,13 @@ func _physics_process(delta):
 	
 	move_and_slide()
 	
-	# Check if player is still in range of the current NPC
-	if current_npc and interacting:
+	# Check if the player is still within range of the current NPC
+	if current_npc:
 		var distance = global_position.distance_to(current_npc.global_position)
 		if distance > interaction_distance:
 			hide_dialogue()
 	
+	# Check for new interaction
 	if Input.is_action_just_pressed("ui_accept"):
 		try_interact()
 
@@ -144,7 +159,6 @@ func handle_animations(direction):
 				animation_player.play("walk_up")
 
 func try_interact():
-	# If already interacting, don't start a new interaction
 	if interacting:
 		return
 	
@@ -152,7 +166,7 @@ func try_interact():
 	
 	if closest_npc:
 		current_npc = closest_npc
-		print_debug("Interacting with NPC: " + current_npc.npc_name)
+		interacting = true
 		display_dialogue_non_blocking()
 	else:
 		hide_dialogue()
@@ -183,52 +197,48 @@ func display_dialogue_non_blocking():
 		_show_dialogue_coroutine()
 
 func _show_dialogue_coroutine() -> void:
-	if interacting:
-		return
-	
-	interacting = true
-	
 	var dialogue = await current_npc.interact(self)
 	if dialogue == "":
 		dialogue = "I have nothing to say."
 	
-	print_debug("Dialogue generated: " + dialogue)
+	# Show NPC name and dialogue
+	npc_name_label.text = current_npc.npc_name
+	npc_name_label.visible = true
+	print_debug("Setting NPC name label to: " + npc_name_label.text)
+	
 	dialogue_label.text = dialogue
 	dialogue_label.visible = true
 	options_container.visible = true
 	print_debug("Dialogue label set to visible, text: " + dialogue_label.text)
 
-func _on_interaction_option_pressed(option: String):
+func _on_option_pressed(option: String):
 	if not current_npc:
 		return
 	
+	var response = ""
 	match option:
-		"talk":
-			var dialogue = await current_npc.interact(self)
-			if dialogue == "":
-				dialogue = "I have nothing more to say."
-			dialogue_label.text = dialogue
-			print_debug("Talk option selected: " + dialogue)
 		"trade":
-			dialogue_label.text = "Let's trade! What do you have?"
-			print_debug("Trade option selected with " + current_npc.npc_name)
+			response = "Let’s trade! I have some goods to offer."
 		"steal":
-			dialogue_label.text = "You try to steal, but " + current_npc.npc_name + " notices!"
-			print_debug("Steal option selected from " + current_npc.npc_name)
+			response = "Hey, don’t steal from me! I’ll call the guards!"
 		"kill":
-			dialogue_label.text = current_npc.npc_name + " has been defeated!"
-			current_npc.queue_free()  # Remove the NPC from the scene
-			print_debug("Kill option selected on " + current_npc.npc_name)
-			current_npc = null
+			response = "You dare to attack me? I’ll defend myself!"
+			current_npc.queue_free()
 			hide_dialogue()
+			return
 		"quest":
-			dialogue_label.text = "I have a quest for you! Find the lost artifact."
-			print_debug("Quest option selected from " + current_npc.npc_name)
-		_:
-			print_debug("Unknown option selected: " + option)
+			response = "I have a quest for you. Will you help me?"
+		"leave":
+			hide_dialogue()
+			return
+	
+	# Update dialogue with the response
+	dialogue_label.text = response
+	print_debug("Option " + option + " selected, response: " + response)
 
 func hide_dialogue():
 	if dialogue_label:
+		npc_name_label.visible = false
 		dialogue_label.visible = false
 		options_container.visible = false
 		print_debug("Dialogue label hidden")

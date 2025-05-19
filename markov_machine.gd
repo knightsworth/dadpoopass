@@ -104,7 +104,7 @@ func generate_name():
 	if parts.size() > 0:
 		for i in range(parts.size()):
 			parts[i] = parts[i].capitalize()
-		result = " ".join(parts)  # Join with spaces instead of ""
+		result = " ".join(parts)
 	
 	return result
 
@@ -114,23 +114,39 @@ func generate_sentences(num_sentences : int = 1):
 		var words = []
 		var current_word = "<START>"
 		var target_length = pick_weighted(lengths) if lengths.size() > 0 else 5
+		var used_phrases = {}  # Track phrases to avoid repetition
 		
+		# Start with a sentence starter
 		if sentence_starters.size() > 0:
 			current_word = sentence_starters[randi() % sentence_starters.size()]
 			words.append(current_word)
 		else:
 			words.append("hello")
 		
-		while len(words) < target_length:
+		# Generate words for the sentence
+		var attempts = 0  # Prevent infinite loops
+		while len(words) < target_length and attempts < target_length * 2:
 			if current_word in occurrences:
 				var next_word = pick_weighted(occurrences[current_word])
 				if next_word == "<END>":
 					break
+				
+				# Check for repetitive phrases (last 3 words)
+				var recent_words = words.slice(max(0, len(words) - 3), len(words))
+				recent_words.append(next_word)
+				var recent_phrase = " ".join(recent_words)
+				if recent_phrase in used_phrases:
+					attempts += 1
+					continue
+				
+				used_phrases[recent_phrase] = true
 				words.append(next_word)
 				current_word = next_word
+				attempts = 0
 			else:
 				break
 		
+		# Format the sentence
 		var sentence = ""
 		if words.size() > 0:
 			words[0] = words[0].capitalize()

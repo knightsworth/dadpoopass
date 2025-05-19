@@ -6,10 +6,11 @@ class_name NPC
 @export var wander_radius: float = 100.0
 @export var idle_time_min: float = 2.0
 @export var idle_time_max: float = 5.0
+@export var avoidance_distance: float = 40.0
+@export var avoidance_force: float = 100.0
 
 var animation_player: AnimationPlayer
 var sprite: Sprite2D
-var name_label: Label
 
 var dialogue_markov: MarkovMachine = null
 
@@ -24,7 +25,6 @@ func _ready():
 	
 	animation_player = $AnimationPlayer if has_node("AnimationPlayer") else null
 	sprite = $Sprite2D if has_node("Sprite2D") else null
-	name_label = $NameLabel if has_node("NameLabel") else null
 	
 	if not sprite:
 		sprite = Sprite2D.new()
@@ -36,20 +36,8 @@ func _ready():
 		add_child(rect)
 		print_debug("NPC sprite not found, using placeholder")
 	
-	if not name_label:
-		name_label = Label.new()
-		name_label.position = Vector2(-50, -40)
-		name_label.size = Vector2(100, 40)  # Increased height to accommodate multiple lines
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD  # Enable word wrapping
-		add_child(name_label)
-		print_debug("NameLabel not found, using placeholder")
-	
 	if npc_name.is_empty():
 		npc_name = "Unknown"
-	
-	if name_label:
-		name_label.text = npc_name
 	
 	enter_idle_state()
 	
@@ -58,11 +46,29 @@ func _ready():
 	print_debug("NPC initialized: " + npc_name)
 
 func _physics_process(delta):
+	var avoidance_vector = calculate_avoidance_vector()
+	velocity += avoidance_vector * delta
+	
 	match current_state:
 		State.IDLE:
 			process_idle_state(delta)
 		State.WALKING:
 			process_walking_state(delta)
+
+func calculate_avoidance_vector() -> Vector2:
+	var avoidance = Vector2.ZERO
+	var npcs = get_tree().get_nodes_in_group("npc")
+	
+	for other_npc in npcs:
+		if other_npc == self:
+			continue
+		var distance = global_position.distance_to(other_npc.global_position)
+		if distance < avoidance_distance and distance > 0:
+			var direction = (global_position - other_npc.global_position).normalized()
+			var force = (avoidance_distance - distance) / avoidance_distance
+			avoidance += direction * force * avoidance_force
+	
+	return avoidance
 
 func process_idle_state(delta):
 	idle_timer -= delta
@@ -123,22 +129,18 @@ func handle_animations(direction):
 			if animation_player.has_animation("walk_up"):
 				animation_player.play("walk_up")
 
-func interact(player):
+func interact(_player):
 	var previous_state = current_state
 	current_state = State.IDLE
 	velocity = Vector2.ZERO
 	
-	var direction = player.global_position - global_position
-	handle_animations(direction)
-	
-	var dialogue = "Hello traveler."
+	var dialogue = "Hello traveler, what do you want to do?"
 	if dialogue_markov:
-		dialogue = dialogue_markov.generate_sentences(randi_range(1, 3))
+		dialogue = dialogue_markov.generate_sentences(randi_range(1, 2))
 		print_debug("NPC " + npc_name + " generated dialogue: " + dialogue)
 	else:
 		print_debug("NPC " + npc_name + " has no dialogue_markov set")
 	
-	# Reduced timer to minimize delay, but this won't block player movement anymore
 	await get_tree().create_timer(0.1).timeout
 	current_state = previous_state
 	
