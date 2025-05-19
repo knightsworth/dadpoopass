@@ -9,8 +9,6 @@
 script = ExtResource("1_onrkg")
 
 [node name="Icon" type="Sprite2D" parent="."]
-position = Vector2(105, 28)
-scale = Vector2(0.328125, 0.1875)
 texture = ExtResource("2_i3pqv")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
